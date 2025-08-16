@@ -114,6 +114,22 @@
     .sr-only {
       position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
+
+    @media (max-width: 480px) {
+  .clock { width: 90vmin; }
+  .digital { font-size: 18px; }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .clock { width: 70vmin; }
+  .digital { font-size: 20px; }
+}
+
+@media (min-width: 769px) {
+  .clock { width: 520px; }
+  .digital { font-size: 22px; }
+}
+
   </style>
 </head>
 <body>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Responsive Analog Clock</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #0f172a;     /* slate-900 */
+      --muted: #667085;  /* slate-ish */
+      --accent: #2563eb; /* blue-600 */
+      --accent-2: #ef4444; /* red-500 */
+      --ring: rgba(15, 23, 42, .06);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg);
+      color: var(--fg);
+      display: grid;
+      place-items: center;
+      gap: 20px;
+      padding: 24px;
+    }
+
+    .wrap {
+      display: grid;
+      place-items: center;
+      gap: 14px;
+      text-align: center;
+      width: 100%;
+      max-width: 680px;
+    }
+
+    .clock {
+      position: relative;
+      width: min(85vmin, 520px); /* scales on all screens */
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      background: #f8fafc; /* subtle face */
+      box-shadow:
+        0 12px 36px rgba(0,0,0,.08), /* outer soft */
+        inset 0 0 0 10px var(--ring),  /* glass ring */
+        inset 0 2px 8px rgba(0,0,0,.04);
+      border: 1px solid rgba(15, 23, 42, .08);
+      isolation: isolate;
+    }
+
+    /* tick marks */
+    .tick {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 2px; height: calc(50% - 30px);
+      background: var(--muted);
+      transform-origin: 50% 100%;
+      opacity: .55;
+    }
+    .tick.thick { width: 4px; opacity: .95; background: var(--fg); }
+
+    /* numerals 1..12 */
+    .num { position: absolute; inset: 0; }
+    .num span {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(14px, 3.6vmin, 22px);
+      color: var(--fg);
+      user-select: none;
+    }
+
+    /* hands */
+    .hand {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform-origin: 50% 95%;
+      transform: translate(-50%, -95%) rotate(0deg);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    .hour   { width: 10px; height: 34%; background: var(--fg); }
+    .minute { width: 6px;  height: 44%; background: var(--accent); }
+    .second { width: 2px;  height: 48%; background: var(--accent-2); transform-origin: 50% 92%; }
+
+    .cap {
+      position: absolute; left: 50%; top: 50%;
+      width: 14px; height: 14px; border-radius: 999px;
+      background: var(--fg);
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 5px rgba(15, 23, 42, .06);
+      z-index: 3;
+    }
+
+    .digital {
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(14px, 4.4vmin, 22px);
+      letter-spacing: .04em;
+      color: var(--muted);
+      user-select: none;
+    }
+
+    .brand {
+      position: absolute; left: 50%; top: 60%;
+      transform: translateX(-50%);
+      font-size: clamp(10px, 2.3vmin, 14px);
+      letter-spacing: .2em; text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="clock" id="clock" role="img" aria-label="Analog clock showing current local time">
+      <div class="hand hour" id="hour" aria-hidden="true"></div>
+      <div class="hand minute" id="minute" aria-hidden="true"></div>
+      <div class="hand second" id="second" aria-hidden="true"></div>
+      <div class="cap" aria-hidden="true"></div>
+      <div class="brand" aria-hidden="true">ANALOG</div>
+      <div class="num" aria-hidden="true" id="nums"></div>
+    </div>
+    <div class="digital" id="digital" aria-live="polite">--:--:--</div>
+    <span class="sr-only" id="srTime"></span>
+  </div>
+
+  <script>
+    const clock = document.getElementById('clock');
+    const hourHand = document.getElementById('hour');
+    const minuteHand = document.getElementById('minute');
+    const secondHand = document.getElementById('second');
+    const digital = document.getElementById('digital');
+    const nums = document.getElementById('nums');
+    const srTime = document.getElementById('srTime');
+
+    // Render numerals 1..12
+    for (let i = 1; i <= 12; i++) {
+      const angle = (i / 12) * 2 * Math.PI;
+      const r = 50 - 12; // percent from center
+      const x = 50 + r * Math.sin(angle);
+      const y = 50 - r * Math.cos(angle);
+      const s = document.createElement('span');
+      s.textContent = i;
+      s.style.left = x + '%';
+      s.style.top = y + '%';
+      nums.appendChild(s);
+    }
+
+    // Tick marks (60 total; every 5th is thicker)
+    for (let i = 0; i < 60; i++) {
+      const t = document.createElement('div');
+      t.className = 'tick' + (i % 5 === 0 ? ' thick' : '');
+      t.style.transform = `translate(-50%, -100%) rotate(${i * 6}deg)`;
+      t.style.height = (i % 5 === 0) ? 'calc(50% - 22px)' : 'calc(50% - 30px)';
+      clock.appendChild(t);
+    }
+
+    let smooth = true; // smooth seconds on for 60fps feel
+
+    function pad(n){ return n.toString().padStart(2, '0'); }
+
+    function setHands(date) {
+      const ms = date.getMilliseconds();
+      const s = date.getSeconds() + (smooth ? ms/1000 : 0);
+      const m = date.getMinutes() + s/60;
+      const h = date.getHours() % 12 + m/60;
+
+      hourHand.style.transform = `translate(-50%, -95%) rotate(${h * 30}deg)`;
+      minuteHand.style.transform = `translate(-50%, -95%) rotate(${m * 6}deg)`;
+      secondHand.style.transform = `translate(-50%, -92%) rotate(${s * 6}deg)`;
+
+      const hh = date.getHours();
+      digital.textContent = `${((hh % 12) || 12)}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${hh < 12 ? 'AM' : 'PM'}`;
+      srTime.textContent = `Time: ${digital.textContent}`;
+    }
+
+    function tick(){ setHands(new Date()); requestAnimationFrame(tick); }
+    tick();
+  </script>
+</body>
+</html>
